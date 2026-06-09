@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+      POSTGRES_DB: ${DB_NAME:-normalizacion_db}
+    ports:
+      - [cite_start]"5432:5432" # Configuración de puertos [cite: 238]
+    volumes:
+      - [cite_start]pgdata:/var/lib/postgresql/data # Volúmenes para persistencia de datos 
+      - [cite_start]./sql/ddl:/docker-entrypoint-initdb.d # Configuración inicial automática (ejecuta scripts DDL al iniciar) [cite: 229]
+    networks:
+      - [cite_start]db_network # Red privada entre contenedores 
+
+  app:
+    build: .
+    container_name: python_normalizer_app
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_NAME: normalizacion_db
+    volumes:
+      - ./data:/app/data # Sincroniza la carpeta de datos crudos/normalizados
+      - ./scripts:/app/scripts # Permite modificar scripts sin reconstruir la imagen
+    networks:
+      - [cite_start]db_network # Red privada entre contenedores 
+
+volumes:
+  [cite_start]pgdata: # Definición del volumen nombrado para PostgreSQL 
+
+networks:
+  db_network:
+    [cite_start]driver: bridge # Red privada
